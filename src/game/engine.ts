@@ -1,5 +1,6 @@
-import wordList from "../data/words.json";
-import puzzleData from "../data/puzzles.json";
+import { getLocaleStrings, type Locale } from "../i18n";
+import { getLocaleContent } from "./content";
+import { normalizeWordForLocale } from "./normalize";
 
 export interface Puzzle {
   start: string;
@@ -8,53 +9,74 @@ export interface Puzzle {
   optimalPaths: string[][];
 }
 
+export type ActiveSide = "start" | "end";
+
 export interface GameState {
+  locale: Locale;
   puzzle: Puzzle;
   puzzleNumber: number;
-  chain: string[]; // starts with puzzle.start
+  forwardChain: string[]; // starts with puzzle.start
+  backwardChain: string[]; // starts with puzzle.end
+  moveHistory: ActiveSide[];
+  activeSide: ActiveSide;
   isComplete: boolean;
   isGivenUp: boolean;
 }
 
-const wordSet = new Set<string>(wordList);
-
-export function isValidWord(word: string): boolean {
-  return wordSet.has(word.toLowerCase());
+export function isValidWord(locale: Locale, word: string): boolean {
+  return getLocaleContent(locale).wordSet.has(normalizeWordForLocale(locale, word));
 }
 
 export function differsByOneLetter(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
+  const lettersA = Array.from(a);
+  const lettersB = Array.from(b);
+  if (lettersA.length !== lettersB.length) return false;
   let diffs = 0;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) diffs++;
+  for (let i = 0; i < lettersA.length; i++) {
+    if (lettersA[i] !== lettersB[i]) diffs++;
     if (diffs > 1) return false;
   }
   return diffs === 1;
 }
 
 export function validateMove(
-  chain: string[],
-  newWord: string
+  locale: Locale,
+  fromWord: string,
+  usedWords: string[],
+  newWord: string,
+  bridgeWord?: string
 ): { valid: boolean; error?: string } {
-  const word = newWord.toLowerCase();
-  if (word.length !== 5) {
-    return { valid: false, error: "Word must be 5 letters" };
+  const normalizedFromWord = normalizeWordForLocale(locale, fromWord);
+  const word = normalizeWordForLocale(locale, newWord);
+  const normalizedBridgeWord = bridgeWord
+    ? normalizeWordForLocale(locale, bridgeWord)
+    : undefined;
+  const strings = getLocaleStrings(locale);
+  if (Array.from(word).length !== 5) {
+    return { valid: false, error: strings.validation.wordLength };
   }
-  if (!isValidWord(word)) {
-    return { valid: false, error: "Not a valid word" };
+  if (!isValidWord(locale, word)) {
+    return { valid: false, error: strings.validation.invalidWord };
   }
-  const lastWord = chain[chain.length - 1];
-  if (!differsByOneLetter(lastWord, word)) {
-    return { valid: false, error: "Must change exactly one letter" };
+  if (!differsByOneLetter(normalizedFromWord, word)) {
+    return { valid: false, error: strings.validation.oneLetter };
   }
-  if (chain.includes(word)) {
-    return { valid: false, error: "Word already used" };
+  if (usedWords.includes(word) && word !== normalizedBridgeWord) {
+    return { valid: false, error: strings.validation.used };
   }
   return { valid: true };
 }
 
+function getLocalDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // Get today's puzzle based on date
-export function getDailyPuzzle(): { puzzle: Puzzle; puzzleNumber: number } {
+export function getDailyPuzzle(locale: Locale): { puzzle: Puzzle; puzzleNumber: number } {
+  const puzzleData = getLocaleContent(locale).puzzles;
   // Epoch: March 10, 2026
   const epoch = new Date(2026, 2, 10); // months are 0-indexed
   const today = new Date();
@@ -81,12 +103,16 @@ export function getDailyPuzzle(): { puzzle: Puzzle; puzzleNumber: number } {
   };
 }
 
-export function createGameState(): GameState {
-  const { puzzle, puzzleNumber } = getDailyPuzzle();
+export function createGameState(locale: Locale): GameState {
+  const { puzzle, puzzleNumber } = getDailyPuzzle(locale);
   return {
+    locale,
     puzzle,
     puzzleNumber,
-    chain: [puzzle.start],
+    forwardChain: [puzzle.start],
+    backwardChain: [puzzle.end],
+    moveHistory: [],
+    activeSide: "start",
     isComplete: false,
     isGivenUp: false,
   };
@@ -95,60 +121,175 @@ export function createGameState(): GameState {
 // Save/load from localStorage
 const STORAGE_KEY = "word-ladder-state";
 
+function getStorageKey(locale: Locale): string {
+  return `${STORAGE_KEY}-${locale}`;
+}
+
 export function saveGame(state: GameState): void {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateKey();
   localStorage.setItem(
-    STORAGE_KEY,
+    getStorageKey(state.locale),
     JSON.stringify({ date: today, state })
   );
 }
 
-export function loadGame(): GameState | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const { date, state } = JSON.parse(raw);
-    const today = new Date().toISOString().split("T")[0];
-    if (date !== today) return null; // stale
-    return state;
-  } catch {
+function isGameState(value: unknown): value is GameState {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<GameState>;
+  return Array.isArray(candidate.forwardChain) && Array.isArray(candidate.backwardChain);
+}
+
+function migrateState(rawState: unknown, locale: Locale): GameState | null {
+  if (isGameState(rawState)) {
+    if (rawState.locale && rawState.locale !== locale) {
+      return null;
+    }
+
+    return {
+      ...rawState,
+      locale,
+    };
+  }
+
+  if (!rawState || typeof rawState !== "object") {
     return null;
   }
+
+  const legacyState = rawState as {
+    puzzle?: Puzzle;
+    puzzleNumber?: number;
+    chain?: string[];
+    isComplete?: boolean;
+    isGivenUp?: boolean;
+  };
+
+  if (
+    !legacyState.puzzle ||
+    typeof legacyState.puzzleNumber !== "number" ||
+    !Array.isArray(legacyState.chain)
+  ) {
+    return null;
+  }
+
+  return {
+    locale,
+    puzzle: legacyState.puzzle,
+    puzzleNumber: legacyState.puzzleNumber,
+    forwardChain: legacyState.chain,
+    backwardChain: [legacyState.puzzle.end],
+    moveHistory: Array.from({ length: Math.max(legacyState.chain.length - 1, 0) }, () => "start"),
+    activeSide: "start",
+    isComplete: Boolean(legacyState.isComplete),
+    isGivenUp: Boolean(legacyState.isGivenUp),
+  };
+}
+
+export function loadGame(locale: Locale): GameState | null {
+  const todaysPuzzle = getDailyPuzzle(locale);
+  const storageKeys = [getStorageKey(locale)];
+  if (locale === "en") {
+    storageKeys.push(STORAGE_KEY);
+  }
+
+  for (const storageKey of storageKeys) {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) continue;
+      const { date, state } = JSON.parse(raw);
+      const today = getLocalDateKey();
+      if (date !== today) continue;
+      const migratedState = migrateState(state, locale);
+      if (!migratedState) continue;
+      if (
+        migratedState.puzzleNumber !== todaysPuzzle.puzzleNumber ||
+        migratedState.puzzle.start !== todaysPuzzle.puzzle.start ||
+        migratedState.puzzle.end !== todaysPuzzle.puzzle.end
+      ) {
+        continue;
+      }
+      if (storageKey === STORAGE_KEY) {
+        saveGame(migratedState);
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      return migratedState;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+export function getFrontierWord(
+  state: GameState,
+  side: ActiveSide = state.activeSide
+): string {
+  return side === "start"
+    ? state.forwardChain[state.forwardChain.length - 1]
+    : state.backwardChain[state.backwardChain.length - 1];
+}
+
+export function isChainsConnected(state: GameState): boolean {
+  const forwardFrontier = getFrontierWord(state, "start");
+  const backwardFrontier = getFrontierWord(state, "end");
+  return (
+    forwardFrontier === backwardFrontier ||
+    differsByOneLetter(forwardFrontier, backwardFrontier)
+  );
+}
+
+export function getMergedChain(state: GameState): string[] {
+  const backwardDisplay = [...state.backwardChain].reverse();
+  const forwardFrontier = getFrontierWord(state, "start");
+  const backwardFrontier = getFrontierWord(state, "end");
+
+  if (forwardFrontier === backwardFrontier) {
+    return [...state.forwardChain, ...backwardDisplay.slice(1)];
+  }
+
+  return [...state.forwardChain, ...backwardDisplay];
 }
 
 export function generateShareText(state: GameState): string {
-  const { puzzle, puzzleNumber, chain } = state;
+  const strings = getLocaleStrings(state.locale);
+  const { puzzle, puzzleNumber } = state;
+  const chain = getMergedChain(state);
   const steps = chain.length - 1; // exclude start word
   const optimal = puzzle.optimalLength;
   const rating =
     steps === optimal
-      ? "⭐ Perfect!"
+      ? strings.share.perfect
       : steps <= optimal + 1
-        ? "🔥 Great!"
+        ? strings.share.great
         : steps <= optimal + 3
-          ? "👍 Good"
-          : "✅ Done";
+          ? strings.share.good
+          : strings.share.done;
 
-  let text = `🪜 Word Ladder #${puzzleNumber}\n`;
-  text += `${puzzle.start.toUpperCase()} → ${puzzle.end.toUpperCase()}\n`;
-  text += `${steps} steps (optimal: ${optimal}) ${rating}\n\n`;
+  let text = `🪜 ${strings.share.gameName} #${puzzleNumber}\n`;
+  text += `${puzzle.start.toLocaleUpperCase(state.locale)} → ${puzzle.end.toLocaleUpperCase(
+    state.locale
+  )}\n`;
+  text += `${strings.share.summary(steps, optimal, rating)}\n\n`;
 
   // Show the chain with changed letters highlighted
   for (let i = 0; i < chain.length; i++) {
-    const word = chain[i].toUpperCase();
+    const word = chain[i].toLocaleUpperCase(state.locale);
     if (i === 0) {
-      text += `${word} (start)\n`;
+      text += `${word} ${strings.share.startTag}\n`;
     } else {
       // Find which letter changed
-      const prev = chain[i - 1];
+      const prev = Array.from(chain[i - 1]);
+      const curr = Array.from(chain[i]);
       let indicator = "";
-      for (let j = 0; j < 5; j++) {
-        indicator += prev[j] === chain[i][j] ? "·" : "↕";
+      for (let j = 0; j < curr.length; j++) {
+        indicator += prev[j] === curr[j] ? "·" : "↕";
       }
-      text += `${indicator}\n${word}${i === chain.length - 1 ? " (end)" : ""}\n`;
+      text += `${indicator}\n${word}${
+        i === chain.length - 1 ? ` ${strings.share.endTag}` : ""
+      }\n`;
     }
   }
 
-  text += `\nhttps://word-ladder.game`;
+  text += `\n${strings.share.url}`;
   return text;
 }

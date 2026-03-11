@@ -1,106 +1,351 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import type { Locale } from "../i18n";
+import { normalizeLetterForLocale } from "../game/normalize";
+import { WordRow } from "./WordRow";
 
 interface WordInputProps {
   onSubmit: (word: string) => { valid: boolean; error?: string };
   disabled?: boolean;
   previousWord: string;
+  locale: Locale;
+  alphabet: string[];
+  referenceWord: string;
+  referencePreviousWord?: string;
+  referencePlacement: "above" | "below";
+  referenceIsStart?: boolean;
+  referenceIsEnd?: boolean;
+  referenceIsTarget?: boolean;
+  submitLabel: string;
+  changeOneLetterMessage: string;
+  invalidWordMessage: string;
+  letterAriaLabel: (index: number) => string;
+  startLabel: string;
+  endLabel: string;
 }
 
-export function WordInput({ onSubmit, disabled, previousWord }: WordInputProps) {
-  const [letters, setLetters] = useState<string[]>(["", "", "", "", ""]);
+interface DraftState {
+  letters: string[];
+  activeIndex: number;
+  changedIndex: number | null;
+}
+
+function createDraft(previousWord: string): DraftState {
+  return {
+    letters: Array.from(previousWord),
+    activeIndex: 0,
+    changedIndex: null,
+  };
+}
+
+function cycleLetter(letter: string, alphabet: string[], direction: -1 | 1): string {
+  const currentIndex = alphabet.indexOf(letter);
+  const nextIndex =
+    currentIndex === -1
+      ? 0
+      : (currentIndex + direction + alphabet.length) % alphabet.length;
+  return alphabet[nextIndex];
+}
+
+export function WordInput({
+  onSubmit,
+  disabled,
+  previousWord,
+  locale,
+  alphabet,
+  referenceWord,
+  referencePreviousWord,
+  referencePlacement,
+  referenceIsStart,
+  referenceIsEnd,
+  referenceIsTarget,
+  submitLabel,
+  changeOneLetterMessage,
+  invalidWordMessage,
+  letterAriaLabel,
+  startLabel,
+  endLabel,
+}: WordInputProps) {
+  const [draft, setDraft] = useState<DraftState>(() => createDraft(previousWord));
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const alphabetSet = new Set(alphabet);
+  const previousLetters = Array.from(previousWord);
+  const normalizeInput = useCallback(
+    (value: string) => normalizeLetterForLocale(locale, value),
+    [locale]
+  );
 
-  useEffect(() => {
-    if (!disabled) {
-      inputRefs.current[0]?.focus();
-    }
-  }, [disabled]);
+  const focusCell = useCallback((index: number) => {
+    const input = inputRefs.current[index];
+    setDraft((prev) =>
+      prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
+    );
+    input?.focus();
+    input?.select();
+  }, []);
+
+  const triggerError = useCallback((message: string) => {
+    setError(message);
+    setShake(true);
+    window.setTimeout(() => setShake(false), 400);
+  }, []);
+
+  const applyLetter = useCallback(
+    (index: number, nextLetter: string) => {
+      const normalized = normalizeInput(nextLetter);
+      if (!alphabetSet.has(normalized)) return;
+
+      setDraft((prev) => {
+        const nextLetters = [...prev.letters];
+
+        if (
+          normalized !== previousLetters[index] &&
+          prev.changedIndex !== null &&
+          prev.changedIndex !== index
+        ) {
+          nextLetters[prev.changedIndex] = previousLetters[prev.changedIndex];
+        }
+
+        nextLetters[index] = normalized;
+
+        let nextChangedIndex = prev.changedIndex;
+        if (normalized !== previousLetters[index]) {
+          nextChangedIndex = index;
+        } else if (prev.changedIndex === index) {
+          nextChangedIndex = null;
+        }
+
+        return {
+          letters: nextLetters,
+          activeIndex: index,
+          changedIndex: nextChangedIndex,
+        };
+      });
+
+      setError(null);
+    },
+    [alphabetSet, normalizeInput, previousLetters]
+  );
+
+  const revertLetter = useCallback(
+    (index: number) => {
+      setDraft((prev) => {
+        if (prev.changedIndex !== index) {
+          return { ...prev, activeIndex: index };
+        }
+
+        const nextLetters = [...prev.letters];
+        nextLetters[index] = previousLetters[index];
+        return {
+          letters: nextLetters,
+          activeIndex: index,
+          changedIndex: null,
+        };
+      });
+
+      setError(null);
+    },
+    [previousLetters]
+  );
+
+  const moveActive = useCallback(
+    (fromIndex: number, direction: -1 | 1) => {
+      const nextIndex = (fromIndex + direction + previousLetters.length) % previousLetters.length;
+      focusCell(nextIndex);
+      setError(null);
+    },
+    [focusCell, previousLetters.length]
+  );
 
   const handleSubmit = useCallback(() => {
-    const word = letters.join("").toLowerCase();
-    if (word.length < 5) {
-      setError("Enter all 5 letters");
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
+    if (draft.changedIndex === null) {
+      triggerError(changeOneLetterMessage);
       return;
     }
+
+    const word = draft.letters.join("").toLowerCase();
     const result = onSubmit(word);
     if (!result.valid) {
-      setError(result.error || "Invalid word");
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-    } else {
-      setLetters(["", "", "", "", ""]);
-      setError(null);
-      // Focus first input after successful submit
-      setTimeout(() => inputRefs.current[0]?.focus(), 50);
+      triggerError(result.error || invalidWordMessage);
+      return;
     }
-  }, [letters, onSubmit]);
+
+    setError(null);
+  }, [
+    changeOneLetterMessage,
+    draft.changedIndex,
+    draft.letters,
+    invalidWordMessage,
+    onSubmit,
+    triggerError,
+  ]);
+
+  useEffect(() => {
+    setDraft(createDraft(previousWord));
+    setError(null);
+    if (!disabled) {
+      window.setTimeout(() => focusCell(0), 0);
+    }
+  }, [disabled, focusCell, previousWord]);
 
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
         handleSubmit();
-      } else if (e.key === "Backspace") {
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
         e.preventDefault();
-        if (letters[index]) {
-          const newLetters = [...letters];
-          newLetters[index] = "";
-          setLetters(newLetters);
-        } else if (index > 0) {
-          const newLetters = [...letters];
-          newLetters[index - 1] = "";
-          setLetters(newLetters);
-          inputRefs.current[index - 1]?.focus();
-        }
-        setError(null);
-      } else if (/^[a-zA-Z]$/.test(e.key)) {
+        moveActive(index, -1);
+        return;
+      }
+
+      if (e.key === "ArrowRight" || e.key === " ") {
         e.preventDefault();
-        const newLetters = [...letters];
-        newLetters[index] = e.key.toLowerCase();
-        setLetters(newLetters);
-        setError(null);
-        if (index < 4) {
-          inputRefs.current[index + 1]?.focus();
+        moveActive(index, 1);
+        return;
+      }
+
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const direction = e.key === "ArrowUp" ? 1 : -1;
+        applyLetter(index, cycleLetter(draft.letters[index], alphabet, direction));
+        window.setTimeout(() => focusCell(index), 0);
+        return;
+      }
+
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        if (draft.changedIndex === index) {
+          revertLetter(index);
+          window.setTimeout(() => focusCell(index), 0);
+        } else {
+          moveActive(index, -1);
         }
+        return;
+      }
+
+      const normalized = normalizeInput(e.key);
+      if (alphabetSet.has(normalized)) {
+        e.preventDefault();
+        applyLetter(index, normalized);
+        window.setTimeout(() => focusCell(index), 0);
       }
     },
-    [letters, handleSubmit]
+    [
+      alphabet,
+      alphabetSet,
+      applyLetter,
+      draft.changedIndex,
+      draft.letters,
+      focusCell,
+      handleSubmit,
+      moveActive,
+      revertLetter,
+      normalizeInput,
+    ]
   );
 
   if (disabled) return null;
 
-  const prevLetters = previousWord.split("");
+  const handleChange = useCallback(
+    (index: number, value: string) => {
+      const nextChar = normalizeInput(value).slice(-1);
+      if (!nextChar) {
+        revertLetter(index);
+        window.setTimeout(() => focusCell(index), 0);
+        return;
+      }
+
+      if (alphabetSet.has(nextChar)) {
+        applyLetter(index, nextChar);
+        window.setTimeout(() => focusCell(index), 0);
+      }
+    },
+    [alphabetSet, applyLetter, focusCell, normalizeInput, revertLetter]
+  );
 
   return (
     <div className="word-input-container">
-      <div className={`word-row word-row-input ${shake ? "shake" : ""}`}>
-        {letters.map((letter, i) => (
-          <input
-            key={i}
-            ref={(el) => {
-              inputRefs.current[i] = el;
-            }}
-            className={`letter-cell letter-input ${
-              letter && letter !== prevLetters[i] ? "letter-changed" : ""
-            }`}
-            value={letter.toUpperCase()}
-            onKeyDown={(e) => handleKeyDown(i, e)}
-            onChange={() => {}} // controlled by onKeyDown
-            maxLength={1}
-            autoComplete="off"
-            autoCapitalize="off"
-            disabled={disabled}
+      <div
+        className={`word-input-stack word-input-stack--${referencePlacement}`}
+      >
+        {referencePlacement === "above" && (
+          <WordRow
+            locale={locale}
+            word={referenceWord}
+            previousWord={referencePreviousWord}
+            isStart={referenceIsStart}
+            isEnd={referenceIsEnd}
+            isTarget={referenceIsTarget}
+            startLabel={startLabel}
+            endLabel={endLabel}
           />
-        ))}
-        <button className="submit-btn" onClick={handleSubmit}>
-          →
-        </button>
+        )}
+
+        <div className="ladder-line">
+          {referencePlacement === "below" && error && (
+            <div className="error-message error-message-inline error-message-inline-top">
+              {error}
+            </div>
+          )}
+          <div className={`word-row word-row-input ${shake ? "shake" : ""}`}>
+            {draft.letters.map((letter, i) => (
+              <input
+                key={i}
+                ref={(el) => {
+                  inputRefs.current[i] = el;
+                }}
+                className={`letter-cell letter-input ${
+                  draft.changedIndex === i ? "letter-changed" : ""
+                } ${draft.activeIndex === i ? "letter-input-active" : ""}`}
+                value={letter.toLocaleUpperCase(locale)}
+                onFocus={(e) => {
+                  setDraft((prev) =>
+                    prev.activeIndex === i ? prev : { ...prev, activeIndex: i }
+                  );
+                  e.currentTarget.select();
+                }}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                onChange={(e) => handleChange(i, e.target.value)}
+                maxLength={1}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                aria-label={letterAriaLabel(i + 1)}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+          <div className="ladder-line-action">
+            <button className="submit-btn" onClick={handleSubmit} tabIndex={-1}>
+              <span className="button-label">{submitLabel}</span>
+              <span className="button-key">(Enter)</span>
+            </button>
+          </div>
+          {referencePlacement === "above" && error && (
+            <div className="error-message error-message-inline error-message-inline-bottom">
+              {error}
+            </div>
+          )}
+        </div>
+
+        {referencePlacement === "below" && (
+          <WordRow
+            locale={locale}
+            word={referenceWord}
+            previousWord={referencePreviousWord}
+            isStart={referenceIsStart}
+            isEnd={referenceIsEnd}
+            isTarget={referenceIsTarget}
+            startLabel={startLabel}
+            endLabel={endLabel}
+          />
+        )}
       </div>
-      {error && <div className="error-message">{error}</div>}
     </div>
   );
 }

@@ -6,6 +6,9 @@ interface WordRowProps {
   isStart?: boolean;
   isEnd?: boolean;
   isTarget?: boolean;
+  locale?: string;
+  startLabel?: string;
+  endLabel?: string;
 }
 
 export function WordRow({
@@ -14,17 +17,22 @@ export function WordRow({
   isStart,
   isEnd,
   isTarget,
+  locale = "en",
+  startLabel = "START",
+  endLabel = "END",
 }: WordRowProps) {
-  const letters = word.toUpperCase().split("");
+  const letters = Array.from(word.toLocaleUpperCase(locale));
+  const previousLetters = previousWord ? Array.from(previousWord) : null;
+  const currentLetters = Array.from(word);
 
   const changedIndices = useMemo(() => {
-    if (!previousWord) return new Set<number>();
+    if (!previousLetters) return new Set<number>();
     const indices = new Set<number>();
-    for (let i = 0; i < 5; i++) {
-      if (previousWord[i] !== word[i]) indices.add(i);
+    for (let i = 0; i < currentLetters.length; i++) {
+      if (previousLetters[i] !== currentLetters[i]) indices.add(i);
     }
     return indices;
-  }, [word, previousWord]);
+  }, [currentLetters, previousLetters]);
 
   return (
     <div className={`word-row ${isTarget ? "word-row-target" : ""}`}>
@@ -38,8 +46,8 @@ export function WordRow({
           {letter}
         </div>
       ))}
-      {isStart && <span className="row-label">START</span>}
-      {isEnd && <span className="row-label">END</span>}
+      {isStart && <span className="row-label">{startLabel}</span>}
+      {isEnd && <span className="row-label">{endLabel}</span>}
     </div>
   );
 }
