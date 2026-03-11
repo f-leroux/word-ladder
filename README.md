@@ -1,73 +1,65 @@
-# React + TypeScript + Vite
+# Word Ladder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A daily five-letter word ladder game built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+- English is the default mode.
+- French is available at `?lang=fr`.
+- The puzzle set is precomputed offline and shipped as static JSON, so the deployed site is just a static frontend.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Play Locally
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+To build the production bundle:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+## Puzzle Data
+
+The app loads precomputed puzzle data from:
+
+- `src/data/puzzles.json` and `src/data/words.json` for English
+- `src/data/fr-puzzles.json` and `src/data/fr-words.json` for French
+
+The generation script is:
+
+```bash
+node scripts/generate-puzzles.mjs --locale en --source src/data/words.json
+node scripts/generate-puzzles.mjs --locale fr --source /tmp/french-array.json
+```
+
+Common-word endpoint lists are built with:
+
+```bash
+node scripts/build-common-words.mjs --locale en
+node scripts/build-common-words.mjs --locale fr
+```
+
+The game restricts puzzle start and end words to those common-word endpoint lists, while allowing intermediate ladder words from the full dictionary.
+
+## GitHub Pages Deployment
+
+This repo is configured to deploy automatically to GitHub Pages with GitHub Actions.
+
+1. Push the repository to GitHub.
+2. In GitHub, open `Settings -> Pages`.
+3. Set the publishing source to `GitHub Actions`.
+4. Push to `main`, or run the `Deploy to GitHub Pages` workflow manually.
+
+The Vite `base` path is set automatically:
+
+- `https://<user>.github.io/<repo>/` for a project site
+- `https://<user>.github.io/` for a user or org site repo
+
+That means the same code works both locally and on GitHub Pages without hand-editing the config before each deploy.
+
+## Notes
+
+- French mode ignores accents during play and uses normalized five-letter words.
+- The built site has no backend requirement.
+- The bundle currently includes both English and French datasets eagerly.
