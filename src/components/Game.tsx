@@ -106,11 +106,15 @@ export function Game({ locale, strings }: GameProps) {
           nextHistory.splice(undoIndex, 1);
         }
 
-        return {
+        const nextState = {
           ...prev,
           forwardChain: prev.forwardChain.slice(0, -1),
           moveHistory: nextHistory,
-          isComplete: false,
+        };
+
+        return {
+          ...nextState,
+          isComplete: isChainsConnected(nextState),
         };
       }
 
@@ -124,11 +128,15 @@ export function Game({ locale, strings }: GameProps) {
         nextHistory.splice(undoIndex, 1);
       }
 
-      return {
+      const nextState = {
         ...prev,
         backwardChain: prev.backwardChain.slice(0, -1),
         moveHistory: nextHistory,
-        isComplete: false,
+      };
+
+      return {
+        ...nextState,
+        isComplete: isChainsConnected(nextState),
       };
     });
   }, []);

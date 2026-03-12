@@ -234,6 +234,15 @@ export function WordInput({
         return;
       }
 
+      if (e.key === "Escape") {
+        if (canUndo && onUndo) {
+          e.preventDefault();
+          e.stopPropagation();
+          onUndo();
+        }
+        return;
+      }
+
       const normalized = normalizeInput(e.key);
       if (alphabetSet.has(normalized)) {
         e.preventDefault();
@@ -245,11 +254,13 @@ export function WordInput({
       alphabet,
       alphabetSet,
       applyLetter,
+      canUndo,
       draft.changedIndex,
       draft.letters,
       focusCell,
       handleSubmit,
       moveActive,
+      onUndo,
       revertLetter,
       normalizeInput,
     ]
