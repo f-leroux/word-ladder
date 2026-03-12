@@ -9,6 +9,12 @@
   --cell-edited-border: #798394;
   --cell-start: #4a90d9;
   --cell-end: #c9b458;
+  --cell-current: #d9772f;
+  --cell-current-strong: #ee9046;
+  --cell-current-bg: rgba(217, 119, 47, 0.18);
+  --cell-common-bg: #2f8f46;
+  --cell-common-border: #56c66f;
+  --cell-common-text: #ffffff;
   --cell-target: rgba(201, 180, 88, 0.15);
   --error: #e74c3c;
   --button-primary: #4a90d9;
@@ -38,6 +44,12 @@
   --cell-edited-border: #94a0af;
   --cell-start: #3b79bf;
   --cell-end: #b58a20;
+  --cell-current: #d86a24;
+  --cell-current-strong: #ef7d33;
+  --cell-current-bg: rgba(216, 106, 36, 0.16);
+  --cell-common-bg: #8fd97b;
+  --cell-common-border: #3f9939;
+  --cell-common-text: #163019;
   --cell-target: rgba(181, 138, 32, 0.12);
   --error: #c75252;
   --button-primary: #3b79bf;

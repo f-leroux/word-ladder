@@ -44,7 +44,7 @@ export function WordRow({
 
         return (
           <div key={i} className="letter-slot">
-            {isChanged && <span className="letter-change-arrow">↓</span>}
+            {isChanged && <span className="letter-change-arrow" aria-hidden="true" />}
             <div
               className={`letter-cell ${
                 isChanged ? "letter-changed" : ""

@@ -203,22 +203,6 @@ export function WordInput({
     onDraftChange?.(draft.letters.join(""));
   }, [draft.letters, onDraftChange]);
 
-  const handleKeyDownCapture = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if ((e.key !== "Escape" && e.key !== "Esc") || !canUndo || !onUndo) {
-        return;
-      }
-
-      e.preventDefault();
-      e.stopPropagation();
-      if (typeof e.nativeEvent.stopImmediatePropagation === "function") {
-        e.nativeEvent.stopImmediatePropagation();
-      }
-      onUndo();
-    },
-    [canUndo, onUndo]
-  );
-
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
@@ -258,7 +242,7 @@ export function WordInput({
         return;
       }
 
-      if (e.key === "Escape" || e.key === "Esc") {
+      if (e.key === "Shift") {
         return;
       }
 
@@ -273,13 +257,11 @@ export function WordInput({
       alphabet,
       alphabetSet,
       applyLetter,
-      canUndo,
       draft.changedIndex,
       draft.letters,
       focusCell,
       handleSubmit,
       moveActive,
-      onUndo,
       revertLetter,
       normalizeInput,
     ]
@@ -321,7 +303,7 @@ export function WordInput({
           <div className="ladder-line-action">
             <button className="undo-btn" onClick={onUndo} tabIndex={-1} type="button">
               <span className="button-label">{undoLabel}</span>
-              <span className="button-key">(Esc)</span>
+              <span className="button-key">(Shift)</span>
             </button>
           </div>
         )}
@@ -359,7 +341,7 @@ export function WordInput({
             {draft.letters.map((letter, i) => (
               <div key={i} className="letter-slot">
                 {draft.changedIndex === i && (
-                  <span className="letter-change-arrow">↓</span>
+                  <span className="letter-change-arrow" aria-hidden="true" />
                 )}
                 <input
                   ref={(el) => {
@@ -377,7 +359,6 @@ export function WordInput({
                     );
                     e.currentTarget.select();
                   }}
-                  onKeyDownCapture={handleKeyDownCapture}
                   onKeyDown={(e) => handleKeyDown(i, e)}
                   onChange={(e) => handleChange(i, e.target.value)}
                   maxLength={1}

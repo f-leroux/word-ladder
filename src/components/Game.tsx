@@ -47,6 +47,7 @@ interface GameProps {
 
 export function Game({ locale, strings }: GameProps) {
   const initialStateRef = useRef<GameState | null>(null);
+  const shiftUndoPendingRef = useRef(false);
   if (initialStateRef.current === null) {
     initialStateRef.current = loadGame(locale) || createGameState(locale);
   }
@@ -170,8 +171,9 @@ export function Game({ locale, strings }: GameProps) {
   useEffect(() => {
     if (state.isComplete) return;
 
-    const handleGlobalKey = (event: KeyboardEvent) => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Tab") {
+        shiftUndoPendingRef.current = false;
         event.preventDefault();
         setState((prev) => ({
           ...prev,
@@ -180,16 +182,22 @@ export function Game({ locale, strings }: GameProps) {
         return;
       }
 
-      if (event.key !== "Escape" && event.key !== "Esc") return;
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
+      if (event.key === "Shift" && !event.altKey && !event.ctrlKey && !event.metaKey) {
+        shiftUndoPendingRef.current = true;
         return;
       }
+
+      shiftUndoPendingRef.current = false;
+    };
+
+    const handleGlobalKeyUp = (event: KeyboardEvent) => {
+      if (event.key !== "Shift") {
+        return;
+      }
+
+      const shouldUndo = shiftUndoPendingRef.current;
+      shiftUndoPendingRef.current = false;
+      if (!shouldUndo) return;
 
       const canUndo =
         state.activeSide === "start"
@@ -201,8 +209,18 @@ export function Game({ locale, strings }: GameProps) {
       handleUndo();
     };
 
-    document.addEventListener("keydown", handleGlobalKey, true);
-    return () => document.removeEventListener("keydown", handleGlobalKey, true);
+    const resetPendingUndo = () => {
+      shiftUndoPendingRef.current = false;
+    };
+
+    document.addEventListener("keydown", handleGlobalKeyDown, true);
+    document.addEventListener("keyup", handleGlobalKeyUp, true);
+    window.addEventListener("blur", resetPendingUndo);
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyDown, true);
+      document.removeEventListener("keyup", handleGlobalKeyUp, true);
+      window.removeEventListener("blur", resetPendingUndo);
+    };
   }, [
     handleUndo,
     state.activeSide,

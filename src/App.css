@@ -190,13 +190,36 @@
   position: absolute;
   left: 50%;
   bottom: calc(100% + 2px);
+  width: 18px;
+  height: 16px;
   transform: translateX(-50%);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--text-secondary);
   pointer-events: none;
   user-select: none;
+}
+
+.letter-change-arrow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 4px;
+  height: 9px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--text-secondary);
+}
+
+.letter-change-arrow::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 4px solid var(--text-secondary);
+  border-bottom: 4px solid var(--text-secondary);
+  border-radius: 2px;
 }
 
 .word-row-placeholder {
@@ -225,14 +248,14 @@
 }
 
 .letter-changed {
-  background: var(--cell-edited-bg);
-  border-color: var(--cell-edited-border);
+  background: var(--cell-bg);
   color: var(--text);
 }
 
 .letter-common {
-  background: rgba(126, 186, 76, 0.22);
-  border-color: rgba(126, 186, 76, 0.7);
+  background: var(--cell-common-bg);
+  border-color: var(--cell-common-border);
+  color: var(--cell-common-text);
 }
 
 .letter-start {
@@ -287,6 +310,10 @@
   justify-content: center;
 }
 
+.word-row-input .letter-cell {
+  border-color: var(--cell-current);
+}
+
 .letter-input {
   caret-color: transparent;
   outline: none;
@@ -297,12 +324,12 @@
 }
 
 .letter-input-active {
-  border-color: var(--cell-start);
-  box-shadow: 0 0 0 1px var(--cell-start) inset;
+  border-color: var(--cell-current-strong);
+  box-shadow: 0 0 0 1px var(--cell-current-strong) inset;
 }
 
-.letter-input-active:not(.letter-changed) {
-  background: rgba(74, 144, 217, 0.12);
+.letter-input-active:not(.letter-common) {
+  background: var(--cell-current-bg);
 }
 
 .submit-btn {
