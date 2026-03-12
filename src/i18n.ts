@@ -101,7 +101,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `${steps} steps (optimal: ${optimal}) ${rating}`,
       startTag: "(start)",
       endTag: "(end)",
-      url: "https://word-ladder.game",
+      url: "https://f-leroux.github.io/word-ladder/",
     },
   },
   fr: {
@@ -160,7 +160,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
         `${steps} étapes (optimal : ${optimal}) ${rating}`,
       startTag: "(début)",
       endTag: "(fin)",
-      url: "https://word-ladder.game/?lang=fr",
+      url: "https://f-leroux.github.io/word-ladder/?lang=fr",
     },
   },
 };
