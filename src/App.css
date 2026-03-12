@@ -190,11 +190,17 @@
   position: absolute;
   left: 50%;
   bottom: calc(100% + 2px);
-  width: 18px;
+  width: 16px;
   height: 16px;
   transform: translateX(-50%);
+  z-index: 2;
   pointer-events: none;
   user-select: none;
+}
+
+.letter-change-arrow--below {
+  top: calc(100% + 2px);
+  bottom: auto;
 }
 
 .letter-change-arrow::before {
@@ -202,8 +208,8 @@
   position: absolute;
   left: 50%;
   top: 0;
-  width: 4px;
-  height: 9px;
+  width: 3px;
+  height: 8px;
   transform: translateX(-50%);
   border-radius: 999px;
   background: var(--text-secondary);
@@ -214,12 +220,10 @@
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 10px;
-  height: 10px;
-  transform: translateX(-50%) rotate(45deg);
-  border-right: 4px solid var(--text-secondary);
-  border-bottom: 4px solid var(--text-secondary);
-  border-radius: 2px;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--text-secondary);
 }
 
 .word-row-placeholder {
@@ -256,14 +260,6 @@
   background: var(--cell-common-bg);
   border-color: var(--cell-common-border);
   color: var(--cell-common-text);
-}
-
-.letter-start {
-  border-color: var(--cell-start);
-}
-
-.letter-end {
-  border-color: var(--cell-end);
 }
 
 .row-label {

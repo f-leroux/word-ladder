@@ -4,6 +4,7 @@ interface WordRowProps {
   word: string;
   previousWord?: string;
   matchedIndices?: Set<number>;
+  changeArrowDirection?: "above" | "below";
   isStart?: boolean;
   isEnd?: boolean;
   isTarget?: boolean;
@@ -16,6 +17,7 @@ export function WordRow({
   word,
   previousWord,
   matchedIndices,
+  changeArrowDirection = "above",
   isStart,
   isEnd,
   isTarget,
@@ -44,13 +46,16 @@ export function WordRow({
 
         return (
           <div key={i} className="letter-slot">
-            {isChanged && <span className="letter-change-arrow" aria-hidden="true" />}
+            {isChanged && (
+              <span
+                className={`letter-change-arrow letter-change-arrow--${changeArrowDirection}`}
+                aria-hidden="true"
+              />
+            )}
             <div
               className={`letter-cell ${
                 isChanged ? "letter-changed" : ""
-              } ${isMatched ? "letter-common" : ""} ${
-                isStart ? "letter-start" : ""
-              } ${isEnd ? "letter-end" : ""}`}
+              } ${isMatched ? "letter-common" : ""}`}
             >
               {letter}
             </div>

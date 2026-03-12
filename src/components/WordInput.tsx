@@ -341,7 +341,12 @@ export function WordInput({
             {draft.letters.map((letter, i) => (
               <div key={i} className="letter-slot">
                 {draft.changedIndex === i && (
-                  <span className="letter-change-arrow" aria-hidden="true" />
+                  <span
+                    className={`letter-change-arrow letter-change-arrow--${
+                      referencePlacement === "below" ? "below" : "above"
+                    }`}
+                    aria-hidden="true"
+                  />
                 )}
                 <input
                   ref={(el) => {
