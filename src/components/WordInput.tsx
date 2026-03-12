@@ -122,6 +122,7 @@ export function WordInput({
     window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches
   );
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const focusTimeoutRef = useRef<number | null>(null);
   const alphabetSet = new Set(alphabet);
   const previousLetters = Array.from(previousWord);
   const mobileKeyboardRows = useMemo(() => getMobileKeyboardRows(locale), [locale]);
@@ -130,18 +131,61 @@ export function WordInput({
     [locale]
   );
 
+  const clearScheduledFocus = useCallback(() => {
+    if (focusTimeoutRef.current !== null) {
+      window.clearTimeout(focusTimeoutRef.current);
+      focusTimeoutRef.current = null;
+    }
+  }, []);
+
+  const activateCell = useCallback(
+    (index: number) => {
+      clearScheduledFocus();
+      setDraft((prev) => {
+        if (prev.changedIndex === null || prev.changedIndex === index) {
+          return prev.activeIndex === index ? prev : { ...prev, activeIndex: index };
+        }
+
+        const nextLetters = [...prev.letters];
+        nextLetters[prev.changedIndex] = previousLetters[prev.changedIndex];
+        return {
+          letters: nextLetters,
+          activeIndex: index,
+          changedIndex: null,
+        };
+      });
+      setError(null);
+    },
+    [clearScheduledFocus, previousLetters]
+  );
+
   const focusCell = useCallback(
     (index: number) => {
       const input = inputRefs.current[index];
-      setDraft((prev) =>
-        prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
-      );
+      activateCell(index);
       if (!isMobileLayout) {
         input?.focus();
         input?.select();
       }
     },
-    [isMobileLayout]
+    [activateCell, isMobileLayout]
+  );
+
+  const scheduleFocusCell = useCallback(
+    (index: number) => {
+      if (isMobileLayout) {
+        return;
+      }
+
+      clearScheduledFocus();
+      focusTimeoutRef.current = window.setTimeout(() => {
+        focusTimeoutRef.current = null;
+        const input = inputRefs.current[index];
+        input?.focus();
+        input?.select();
+      }, 0);
+    },
+    [clearScheduledFocus, isMobileLayout]
   );
 
   const triggerError = useCallback((message: string) => {
@@ -251,9 +295,9 @@ export function WordInput({
     setDraft(createDraft(previousWord));
     setError(null);
     if (!disabled && !isMobileLayout) {
-      window.setTimeout(() => focusCell(0), 0);
+      scheduleFocusCell(0);
     }
-  }, [disabled, focusCell, isMobileLayout, previousWord]);
+  }, [disabled, isMobileLayout, previousWord, scheduleFocusCell]);
 
   useEffect(() => {
     const media = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
@@ -269,6 +313,8 @@ export function WordInput({
   useEffect(() => {
     onDraftChange?.(draft.letters.join(""));
   }, [draft.letters, onDraftChange]);
+
+  useEffect(() => () => clearScheduledFocus(), [clearScheduledFocus]);
 
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -294,7 +340,7 @@ export function WordInput({
         e.preventDefault();
         const direction = e.key === "ArrowUp" ? 1 : -1;
         applyLetter(index, cycleLetter(draft.letters[index], alphabet, direction));
-        window.setTimeout(() => focusCell(index), 0);
+        scheduleFocusCell(index);
         return;
       }
 
@@ -302,7 +348,7 @@ export function WordInput({
         e.preventDefault();
         if (draft.changedIndex === index) {
           revertLetter(index);
-          window.setTimeout(() => focusCell(index), 0);
+          scheduleFocusCell(index);
         } else {
           moveActive(index, -1);
         }
@@ -317,7 +363,7 @@ export function WordInput({
       if (alphabetSet.has(normalized)) {
         e.preventDefault();
         applyLetter(index, normalized);
-        window.setTimeout(() => focusCell(index), 0);
+        scheduleFocusCell(index);
       }
     },
     [
@@ -326,11 +372,11 @@ export function WordInput({
       applyLetter,
       draft.changedIndex,
       draft.letters,
-      focusCell,
       handleSubmit,
       moveActive,
       revertLetter,
       normalizeInput,
+      scheduleFocusCell,
     ]
   );
 
@@ -339,16 +385,16 @@ export function WordInput({
       const nextChar = normalizeInput(value).slice(-1);
       if (!nextChar) {
         revertLetter(index);
-        window.setTimeout(() => focusCell(index), 0);
+        scheduleFocusCell(index);
         return;
       }
 
       if (alphabetSet.has(nextChar)) {
         applyLetter(index, nextChar);
-        window.setTimeout(() => focusCell(index), 0);
+        scheduleFocusCell(index);
       }
     },
-    [alphabetSet, applyLetter, focusCell, normalizeInput, revertLetter]
+    [alphabetSet, applyLetter, normalizeInput, revertLetter, scheduleFocusCell]
   );
 
   const renderReferenceRow = useCallback(
@@ -402,12 +448,7 @@ export function WordInput({
           <button
             key={index}
             className={className}
-            onClick={() => {
-              setDraft((prev) =>
-                prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
-              );
-              setError(null);
-            }}
+            onClick={() => activateCell(index)}
             type="button"
             tabIndex={-1}
             aria-label={letterAriaLabel(index + 1)}
@@ -424,12 +465,8 @@ export function WordInput({
           }}
           className={className}
           value={letter.toLocaleUpperCase(locale)}
-          onFocus={(e) => {
-            setDraft((prev) =>
-              prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
-            );
-            e.currentTarget.select();
-          }}
+          onMouseDown={() => activateCell(index)}
+          onFocus={(e) => e.currentTarget.select()}
           onKeyDown={(e) => handleKeyDown(index, e)}
           onChange={(e) => handleChange(index, e.target.value)}
           maxLength={1}
@@ -442,6 +479,7 @@ export function WordInput({
       );
     },
     [
+      activateCell,
       disabled,
       draft.activeIndex,
       draft.changedIndex,
