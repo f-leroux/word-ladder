@@ -12,6 +12,7 @@ export interface LocaleStrings {
   startLabel: string;
   endLabel: string;
   submitWord: string;
+  undoWord: string;
   buildFromEnd: string;
   buildFromStart: string;
   giveUp: string;
@@ -60,13 +61,14 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       "You can only change one letter per step",
       "The next row starts from your current word",
       "You can switch and build upward from the end word too",
-      "Click a letter or use the arrow keys to edit; Tab switches sides",
+      "Click a letter or use the arrow keys to edit; Tab switches sides and Esc undoes the last word on that side",
     ],
     helpFooter: "A new puzzle is available every day.",
     helpClose: "Got it!",
     startLabel: "START",
     endLabel: "END",
     submitWord: "Submit Word",
+    undoWord: "Undo Word",
     buildFromEnd: "Build From End",
     buildFromStart: "Build From Start",
     giveUp: "Give Up",
@@ -116,7 +118,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       "Vous ne pouvez changer qu'une seule lettre par étape",
       "La ligne suivante repart de votre mot actuel",
       "Vous pouvez aussi partir du mot de fin et remonter",
-      "Cliquez une lettre ou utilisez les flèches pour modifier ; Tab change de côté",
+      "Cliquez une lettre ou utilisez les flèches pour modifier ; Tab change de côté et Esc annule le dernier mot sur ce côté",
       "Les accents ne comptent pas ; écrivez les mots sans accents",
     ],
     helpFooter: "Un nouveau puzzle est disponible chaque jour.",
@@ -124,6 +126,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
     startLabel: "DÉBUT",
     endLabel: "FIN",
     submitWord: "Valider",
+    undoWord: "Annuler",
     buildFromEnd: "Partir de la fin",
     buildFromStart: "Partir du début",
     giveUp: "Abandonner",

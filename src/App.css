@@ -317,6 +317,22 @@
   gap: 6px;
 }
 
+.undo-btn {
+  min-width: 168px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+
 .switch-side-btn:hover {
   background: var(--bg-secondary);
 }
@@ -518,6 +534,7 @@
     font-size: 13px;
   }
 
+  .undo-btn,
   .switch-side-btn {
     min-width: 132px;
   }

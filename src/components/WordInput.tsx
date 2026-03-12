@@ -5,6 +5,8 @@ import { WordRow } from "./WordRow";
 
 interface WordInputProps {
   onSubmit: (word: string) => { valid: boolean; error?: string };
+  onUndo?: () => void;
+  canUndo?: boolean;
   disabled?: boolean;
   previousWord: string;
   locale: Locale;
@@ -16,6 +18,7 @@ interface WordInputProps {
   referenceIsEnd?: boolean;
   referenceIsTarget?: boolean;
   submitLabel: string;
+  undoLabel: string;
   changeOneLetterMessage: string;
   invalidWordMessage: string;
   letterAriaLabel: (index: number) => string;
@@ -48,6 +51,8 @@ function cycleLetter(letter: string, alphabet: string[], direction: -1 | 1): str
 
 export function WordInput({
   onSubmit,
+  onUndo,
+  canUndo = false,
   disabled,
   previousWord,
   locale,
@@ -59,6 +64,7 @@ export function WordInput({
   referenceIsEnd,
   referenceIsTarget,
   submitLabel,
+  undoLabel,
   changeOneLetterMessage,
   invalidWordMessage,
   letterAriaLabel,
@@ -268,23 +274,50 @@ export function WordInput({
     [alphabetSet, applyLetter, focusCell, normalizeInput, revertLetter]
   );
 
+  const renderReferenceRow = useCallback(
+    () => (
+      <div className="ladder-line">
+        <WordRow
+          locale={locale}
+          word={referenceWord}
+          previousWord={referencePreviousWord}
+          isStart={referenceIsStart}
+          isEnd={referenceIsEnd}
+          isTarget={referenceIsTarget}
+          startLabel={startLabel}
+          endLabel={endLabel}
+        />
+        {canUndo && onUndo && (
+          <div className="ladder-line-action">
+            <button className="undo-btn" onClick={onUndo} tabIndex={-1} type="button">
+              <span className="button-label">{undoLabel}</span>
+              <span className="button-key">(Esc)</span>
+            </button>
+          </div>
+        )}
+      </div>
+    ),
+    [
+      canUndo,
+      endLabel,
+      locale,
+      onUndo,
+      referenceIsEnd,
+      referenceIsStart,
+      referenceIsTarget,
+      referencePreviousWord,
+      referenceWord,
+      startLabel,
+      undoLabel,
+    ]
+  );
+
   return (
     <div className="word-input-container">
       <div
         className={`word-input-stack word-input-stack--${referencePlacement}`}
       >
-        {referencePlacement === "above" && (
-          <WordRow
-            locale={locale}
-            word={referenceWord}
-            previousWord={referencePreviousWord}
-            isStart={referenceIsStart}
-            isEnd={referenceIsEnd}
-            isTarget={referenceIsTarget}
-            startLabel={startLabel}
-            endLabel={endLabel}
-          />
-        )}
+        {referencePlacement === "above" && renderReferenceRow()}
 
         <div className="ladder-line">
           {referencePlacement === "below" && error && (
@@ -333,18 +366,7 @@ export function WordInput({
           )}
         </div>
 
-        {referencePlacement === "below" && (
-          <WordRow
-            locale={locale}
-            word={referenceWord}
-            previousWord={referencePreviousWord}
-            isStart={referenceIsStart}
-            isEnd={referenceIsEnd}
-            isTarget={referenceIsTarget}
-            startLabel={startLabel}
-            endLabel={endLabel}
-          />
-        )}
+        {referencePlacement === "below" && renderReferenceRow()}
       </div>
     </div>
   );

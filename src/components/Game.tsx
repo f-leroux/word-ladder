@@ -93,21 +93,80 @@ export function Game({ locale, strings }: GameProps) {
     }));
   }, []);
 
+  const handleUndo = useCallback(() => {
+    setState((prev) => {
+      if (prev.activeSide === "start") {
+        if (prev.forwardChain.length <= 1) {
+          return prev;
+        }
+
+        const nextHistory = [...prev.moveHistory];
+        const undoIndex = nextHistory.lastIndexOf("start");
+        if (undoIndex !== -1) {
+          nextHistory.splice(undoIndex, 1);
+        }
+
+        return {
+          ...prev,
+          forwardChain: prev.forwardChain.slice(0, -1),
+          moveHistory: nextHistory,
+          isComplete: false,
+        };
+      }
+
+      if (prev.backwardChain.length <= 1) {
+        return prev;
+      }
+
+      const nextHistory = [...prev.moveHistory];
+      const undoIndex = nextHistory.lastIndexOf("end");
+      if (undoIndex !== -1) {
+        nextHistory.splice(undoIndex, 1);
+      }
+
+      return {
+        ...prev,
+        backwardChain: prev.backwardChain.slice(0, -1),
+        moveHistory: nextHistory,
+        isComplete: false,
+      };
+    });
+  }, []);
+
   useEffect(() => {
     if (state.isComplete) return;
 
-    const handleGlobalTab = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
+    const handleGlobalKey = (event: KeyboardEvent) => {
+      if (event.key === "Tab") {
+        event.preventDefault();
+        setState((prev) => ({
+          ...prev,
+          activeSide: prev.activeSide === "start" ? "end" : "start",
+        }));
+        return;
+      }
+
+      if (event.key !== "Escape") return;
+
+      const canUndo =
+        state.activeSide === "start"
+          ? state.forwardChain.length > 1
+          : state.backwardChain.length > 1;
+      if (!canUndo) return;
+
       event.preventDefault();
-      setState((prev) => ({
-        ...prev,
-        activeSide: prev.activeSide === "start" ? "end" : "start",
-      }));
+      handleUndo();
     };
 
-    window.addEventListener("keydown", handleGlobalTab, true);
-    return () => window.removeEventListener("keydown", handleGlobalTab, true);
-  }, [state.isComplete]);
+    window.addEventListener("keydown", handleGlobalKey, true);
+    return () => window.removeEventListener("keydown", handleGlobalKey, true);
+  }, [
+    handleUndo,
+    state.activeSide,
+    state.backwardChain.length,
+    state.forwardChain.length,
+    state.isComplete,
+  ]);
 
   const isSolved = state.isComplete && !state.isGivenUp;
   const mergedChain = getMergedChain(state);
@@ -122,6 +181,10 @@ export function Game({ locale, strings }: GameProps) {
 
   const switchButtonLabel =
     state.activeSide === "start" ? strings.buildFromEnd : strings.buildFromStart;
+  const canUndoActiveSide =
+    state.activeSide === "start"
+      ? state.forwardChain.length > 1
+      : state.backwardChain.length > 1;
 
   return (
     <div className="game">
@@ -175,6 +238,8 @@ export function Game({ locale, strings }: GameProps) {
             {state.activeSide === "start" && (
               <WordInput
                 onSubmit={handleSubmit}
+                onUndo={handleUndo}
+                canUndo={canUndoActiveSide}
                 locale={state.locale}
                 alphabet={alphabet}
                 previousWord={startInputWord}
@@ -187,6 +252,7 @@ export function Game({ locale, strings }: GameProps) {
                 referencePlacement="above"
                 referenceIsStart={state.forwardChain.length === 1}
                 submitLabel={strings.submitWord}
+                undoLabel={strings.undoWord}
                 changeOneLetterMessage={strings.changeOneLetterToContinue}
                 invalidWordMessage={strings.invalidWord}
                 letterAriaLabel={strings.letterAriaLabel}
@@ -212,6 +278,8 @@ export function Game({ locale, strings }: GameProps) {
             {state.activeSide === "end" && (
               <WordInput
                 onSubmit={handleSubmit}
+                onUndo={handleUndo}
+                canUndo={canUndoActiveSide}
                 locale={state.locale}
                 alphabet={alphabet}
                 previousWord={endInputWord}
@@ -220,6 +288,7 @@ export function Game({ locale, strings }: GameProps) {
                 referenceIsEnd={state.backwardChain.length === 1}
                 referenceIsTarget={state.backwardChain.length === 1}
                 submitLabel={strings.submitWord}
+                undoLabel={strings.undoWord}
                 changeOneLetterMessage={strings.changeOneLetterToContinue}
                 invalidWordMessage={strings.invalidWord}
                 letterAriaLabel={strings.letterAriaLabel}
