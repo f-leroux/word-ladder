@@ -252,7 +252,7 @@ export function Game({ locale, strings }: GameProps) {
       : state.backwardChain.length > 1;
 
   return (
-    <div className="game">
+    <div className={`game${!state.isComplete ? " game--editing" : ""}`}>
       <div className="game-info">
         <span className="puzzle-number">#{state.puzzleNumber}</span>
         <span className="step-count">{strings.stepCount(steps)}</span>
@@ -324,10 +324,17 @@ export function Game({ locale, strings }: GameProps) {
                 referencePlacement="above"
                 referenceIsStart={state.forwardChain.length === 1}
                 submitLabel={strings.submitWord}
+                submitShortLabel={strings.submitShort}
                 undoLabel={strings.undoWord}
+                undoShortLabel={strings.undoShort}
+                onSwitchSide={handleSwitchSide}
+                switchSideLabel={switchButtonLabel}
+                switchSideShortLabel={strings.switchSideShort}
                 changeOneLetterMessage={strings.changeOneLetterToContinue}
                 invalidWordMessage={strings.invalidWord}
                 letterAriaLabel={strings.letterAriaLabel}
+                moveLeftLabel={strings.moveLeft}
+                moveRightLabel={strings.moveRight}
                 startLabel={strings.startLabel}
                 endLabel={strings.endLabel}
               />
@@ -362,10 +369,17 @@ export function Game({ locale, strings }: GameProps) {
                 referenceIsEnd={state.backwardChain.length === 1}
                 referenceIsTarget={state.backwardChain.length === 1}
                 submitLabel={strings.submitWord}
+                submitShortLabel={strings.submitShort}
                 undoLabel={strings.undoWord}
+                undoShortLabel={strings.undoShort}
+                onSwitchSide={handleSwitchSide}
+                switchSideLabel={switchButtonLabel}
+                switchSideShortLabel={strings.switchSideShort}
                 changeOneLetterMessage={strings.changeOneLetterToContinue}
                 invalidWordMessage={strings.invalidWord}
                 letterAriaLabel={strings.letterAriaLabel}
+                moveLeftLabel={strings.moveLeft}
+                moveRightLabel={strings.moveRight}
                 startLabel={strings.startLabel}
                 endLabel={strings.endLabel}
               />

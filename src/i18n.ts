@@ -12,9 +12,14 @@ export interface LocaleStrings {
   startLabel: string;
   endLabel: string;
   submitWord: string;
+  submitShort: string;
   undoWord: string;
+  undoShort: string;
   buildFromEnd: string;
   buildFromStart: string;
+  switchSideShort: string;
+  moveLeft: string;
+  moveRight: string;
   giveUp: string;
   copied: string;
   shareResult: string;
@@ -68,9 +73,14 @@ const STRINGS: Record<Locale, LocaleStrings> = {
     startLabel: "START",
     endLabel: "END",
     submitWord: "Submit Word",
+    submitShort: "Submit",
     undoWord: "Undo Word",
+    undoShort: "Undo",
     buildFromEnd: "Build From End",
     buildFromStart: "Build From Start",
+    switchSideShort: "Switch",
+    moveLeft: "Move left",
+    moveRight: "Move right",
     giveUp: "Give Up",
     copied: "Copied!",
     shareResult: "Share Result 📋",
@@ -126,9 +136,14 @@ const STRINGS: Record<Locale, LocaleStrings> = {
     startLabel: "DÉBUT",
     endLabel: "FIN",
     submitWord: "Valider",
+    submitShort: "Valider",
     undoWord: "Annuler",
+    undoShort: "Annuler",
     buildFromEnd: "Partir de la fin",
     buildFromStart: "Partir du début",
+    switchSideShort: "Changer",
+    moveLeft: "Vers la gauche",
+    moveRight: "Vers la droite",
     giveUp: "Abandonner",
     copied: "Copié !",
     shareResult: "Partager 📋",

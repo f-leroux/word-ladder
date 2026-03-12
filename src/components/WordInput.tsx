@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { Locale } from "../i18n";
 import { normalizeLetterForLocale } from "../game/normalize";
 import { WordRow } from "./WordRow";
@@ -6,6 +6,7 @@ import { WordRow } from "./WordRow";
 interface WordInputProps {
   onSubmit: (word: string) => { valid: boolean; error?: string };
   onUndo?: () => void;
+  onSwitchSide?: () => void;
   onDraftChange?: (word: string) => void;
   matchedIndices?: Set<number>;
   canUndo?: boolean;
@@ -20,10 +21,16 @@ interface WordInputProps {
   referenceIsEnd?: boolean;
   referenceIsTarget?: boolean;
   submitLabel: string;
+  submitShortLabel: string;
   undoLabel: string;
+  undoShortLabel: string;
+  switchSideLabel: string;
+  switchSideShortLabel: string;
   changeOneLetterMessage: string;
   invalidWordMessage: string;
   letterAriaLabel: (index: number) => string;
+  moveLeftLabel: string;
+  moveRightLabel: string;
   startLabel: string;
   endLabel: string;
 }
@@ -51,9 +58,38 @@ function cycleLetter(letter: string, alphabet: string[], direction: -1 | 1): str
   return alphabet[nextIndex];
 }
 
+const MOBILE_BREAKPOINT_QUERY = "(max-width: 720px)";
+
+function prefersAzerty(locale: Locale): boolean {
+  if (locale === "fr") return true;
+
+  const languages =
+    navigator.languages && navigator.languages.length > 0
+      ? navigator.languages
+      : [navigator.language];
+  return languages.some((language) => language.toLowerCase().startsWith("fr"));
+}
+
+function getMobileKeyboardRows(locale: Locale): string[][] {
+  if (prefersAzerty(locale)) {
+    return [
+      Array.from("azertyuiop"),
+      Array.from("qsdfghjklm"),
+      Array.from("wxcvbn"),
+    ];
+  }
+
+  return [
+    Array.from("qwertyuiop"),
+    Array.from("asdfghjkl"),
+    Array.from("zxcvbnm"),
+  ];
+}
+
 export function WordInput({
   onSubmit,
   onUndo,
+  onSwitchSide,
   onDraftChange,
   matchedIndices,
   canUndo = false,
@@ -68,32 +104,47 @@ export function WordInput({
   referenceIsEnd,
   referenceIsTarget,
   submitLabel,
+  submitShortLabel,
   undoLabel,
+  undoShortLabel,
+  switchSideLabel,
+  switchSideShortLabel,
   changeOneLetterMessage,
   invalidWordMessage,
   letterAriaLabel,
+  moveLeftLabel,
+  moveRightLabel,
   startLabel,
   endLabel,
 }: WordInputProps) {
   const [draft, setDraft] = useState<DraftState>(() => createDraft(previousWord));
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(() =>
+    window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches
+  );
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const alphabetSet = new Set(alphabet);
   const previousLetters = Array.from(previousWord);
+  const mobileKeyboardRows = useMemo(() => getMobileKeyboardRows(locale), [locale]);
   const normalizeInput = useCallback(
     (value: string) => normalizeLetterForLocale(locale, value),
     [locale]
   );
 
-  const focusCell = useCallback((index: number) => {
-    const input = inputRefs.current[index];
-    setDraft((prev) =>
-      prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
-    );
-    input?.focus();
-    input?.select();
-  }, []);
+  const focusCell = useCallback(
+    (index: number) => {
+      const input = inputRefs.current[index];
+      setDraft((prev) =>
+        prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
+      );
+      if (!isMobileLayout) {
+        input?.focus();
+        input?.select();
+      }
+    },
+    [isMobileLayout]
+  );
 
   const triggerError = useCallback((message: string) => {
     setError(message);
@@ -168,6 +219,13 @@ export function WordInput({
     [focusCell, previousLetters.length]
   );
 
+  const handleMobileKeyPress = useCallback(
+    (letter: string) => {
+      applyLetter(draft.activeIndex, letter);
+    },
+    [applyLetter, draft.activeIndex]
+  );
+
   const handleSubmit = useCallback(() => {
     if (draft.changedIndex === null) {
       triggerError(changeOneLetterMessage);
@@ -194,10 +252,21 @@ export function WordInput({
   useEffect(() => {
     setDraft(createDraft(previousWord));
     setError(null);
-    if (!disabled) {
+    if (!disabled && !isMobileLayout) {
       window.setTimeout(() => focusCell(0), 0);
     }
-  }, [disabled, focusCell, previousWord]);
+  }, [disabled, focusCell, isMobileLayout, previousWord]);
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_BREAKPOINT_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsMobileLayout(event.matches);
+    };
+
+    setIsMobileLayout(media.matches);
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
+  }, []);
 
   useEffect(() => {
     onDraftChange?.(draft.letters.join(""));
@@ -267,8 +336,6 @@ export function WordInput({
     ]
   );
 
-  if (disabled) return null;
-
   const handleChange = useCallback(
     (index: number, value: string) => {
       const nextChar = normalizeInput(value).slice(-1);
@@ -324,6 +391,73 @@ export function WordInput({
     ]
   );
 
+  const renderEditableCell = useCallback(
+    (letter: string, index: number) => {
+      const className = `letter-cell letter-input ${
+        draft.changedIndex === index ? "letter-changed" : ""
+      } ${matchedIndices?.has(index) ? "letter-common" : ""} ${
+        draft.activeIndex === index ? "letter-input-active" : ""
+      } ${isMobileLayout ? "letter-input-mobile" : ""}`;
+
+      if (isMobileLayout) {
+        return (
+          <button
+            key={index}
+            className={className}
+            onClick={() => {
+              setDraft((prev) =>
+                prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
+              );
+              setError(null);
+            }}
+            type="button"
+            tabIndex={-1}
+            aria-label={letterAriaLabel(index + 1)}
+          >
+            {letter.toLocaleUpperCase(locale)}
+          </button>
+        );
+      }
+
+      return (
+        <input
+          ref={(el) => {
+            inputRefs.current[index] = el;
+          }}
+          className={className}
+          value={letter.toLocaleUpperCase(locale)}
+          onFocus={(e) => {
+            setDraft((prev) =>
+              prev.activeIndex === index ? prev : { ...prev, activeIndex: index }
+            );
+            e.currentTarget.select();
+          }}
+          onKeyDown={(e) => handleKeyDown(index, e)}
+          onChange={(e) => handleChange(index, e.target.value)}
+          maxLength={1}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          aria-label={letterAriaLabel(index + 1)}
+          disabled={disabled}
+        />
+      );
+    },
+    [
+      disabled,
+      draft.activeIndex,
+      draft.changedIndex,
+      handleChange,
+      handleKeyDown,
+      isMobileLayout,
+      letterAriaLabel,
+      locale,
+      matchedIndices,
+    ]
+  );
+
+  if (disabled) return null;
+
   return (
     <div className="word-input-container">
       <div
@@ -348,31 +482,7 @@ export function WordInput({
                     aria-hidden="true"
                   />
                 )}
-                <input
-                  ref={(el) => {
-                    inputRefs.current[i] = el;
-                  }}
-                  className={`letter-cell letter-input ${
-                    draft.changedIndex === i ? "letter-changed" : ""
-                  } ${matchedIndices?.has(i) ? "letter-common" : ""} ${
-                    draft.activeIndex === i ? "letter-input-active" : ""
-                  }`}
-                  value={letter.toLocaleUpperCase(locale)}
-                  onFocus={(e) => {
-                    setDraft((prev) =>
-                      prev.activeIndex === i ? prev : { ...prev, activeIndex: i }
-                    );
-                    e.currentTarget.select();
-                  }}
-                  onKeyDown={(e) => handleKeyDown(i, e)}
-                  onChange={(e) => handleChange(i, e.target.value)}
-                  maxLength={1}
-                  autoComplete="off"
-                  autoCapitalize="characters"
-                  spellCheck={false}
-                  aria-label={letterAriaLabel(i + 1)}
-                  disabled={disabled}
-                />
+                {renderEditableCell(letter, i)}
               </div>
             ))}
           </div>
@@ -391,6 +501,83 @@ export function WordInput({
 
         {referencePlacement === "below" && renderReferenceRow()}
       </div>
+
+      {isMobileLayout && (
+        <div className="mobile-input-dock">
+          <div className="mobile-input-dock-inner">
+            <div className="mobile-input-actions">
+              <button
+                className="mobile-control-btn mobile-control-btn-icon"
+                onClick={() => moveActive(draft.activeIndex, -1)}
+                type="button"
+                tabIndex={-1}
+                aria-label={moveLeftLabel}
+              >
+                <span aria-hidden="true">←</span>
+              </button>
+              <button
+                className="mobile-control-btn mobile-control-btn-icon"
+                onClick={() => moveActive(draft.activeIndex, 1)}
+                type="button"
+                tabIndex={-1}
+                aria-label={moveRightLabel}
+              >
+                <span aria-hidden="true">→</span>
+              </button>
+              <button
+                className="mobile-control-btn mobile-control-btn-primary"
+                onClick={handleSubmit}
+                type="button"
+                tabIndex={-1}
+              >
+                {submitShortLabel}
+              </button>
+              <button
+                className="mobile-control-btn"
+                onClick={onUndo}
+                type="button"
+                tabIndex={-1}
+                disabled={!canUndo || !onUndo}
+              >
+                {undoShortLabel}
+              </button>
+              <button
+                className="mobile-control-btn"
+                onClick={onSwitchSide}
+                type="button"
+                tabIndex={-1}
+                aria-label={switchSideLabel}
+              >
+                {switchSideShortLabel}
+              </button>
+            </div>
+
+            <div className="mobile-keyboard" aria-label="On-screen keyboard">
+              {mobileKeyboardRows.map((row, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className="mobile-keyboard-row"
+                  style={{
+                    gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {row.map((letter) => (
+                    <button
+                      key={letter}
+                      className="mobile-key-btn"
+                      onClick={() => handleMobileKeyPress(letter)}
+                      type="button"
+                      tabIndex={-1}
+                    >
+                      {letter.toLocaleUpperCase(locale)}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
