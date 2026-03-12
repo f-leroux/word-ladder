@@ -6,6 +6,8 @@ import { WordRow } from "./WordRow";
 interface WordInputProps {
   onSubmit: (word: string) => { valid: boolean; error?: string };
   onUndo?: () => void;
+  onDraftChange?: (word: string) => void;
+  matchedIndices?: Set<number>;
   canUndo?: boolean;
   disabled?: boolean;
   previousWord: string;
@@ -52,6 +54,8 @@ function cycleLetter(letter: string, alphabet: string[], direction: -1 | 1): str
 export function WordInput({
   onSubmit,
   onUndo,
+  onDraftChange,
+  matchedIndices,
   canUndo = false,
   disabled,
   previousWord,
@@ -195,6 +199,26 @@ export function WordInput({
     }
   }, [disabled, focusCell, previousWord]);
 
+  useEffect(() => {
+    onDraftChange?.(draft.letters.join(""));
+  }, [draft.letters, onDraftChange]);
+
+  const handleKeyDownCapture = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if ((e.key !== "Escape" && e.key !== "Esc") || !canUndo || !onUndo) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.nativeEvent.stopImmediatePropagation === "function") {
+        e.nativeEvent.stopImmediatePropagation();
+      }
+      onUndo();
+    },
+    [canUndo, onUndo]
+  );
+
   const handleKeyDown = useCallback(
     (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
@@ -234,12 +258,7 @@ export function WordInput({
         return;
       }
 
-      if (e.key === "Escape") {
-        if (canUndo && onUndo) {
-          e.preventDefault();
-          e.stopPropagation();
-          onUndo();
-        }
+      if (e.key === "Escape" || e.key === "Esc") {
         return;
       }
 
@@ -338,30 +357,37 @@ export function WordInput({
           )}
           <div className={`word-row word-row-input ${shake ? "shake" : ""}`}>
             {draft.letters.map((letter, i) => (
-              <input
-                key={i}
-                ref={(el) => {
-                  inputRefs.current[i] = el;
-                }}
-                className={`letter-cell letter-input ${
-                  draft.changedIndex === i ? "letter-changed" : ""
-                } ${draft.activeIndex === i ? "letter-input-active" : ""}`}
-                value={letter.toLocaleUpperCase(locale)}
-                onFocus={(e) => {
-                  setDraft((prev) =>
-                    prev.activeIndex === i ? prev : { ...prev, activeIndex: i }
-                  );
-                  e.currentTarget.select();
-                }}
-                onKeyDown={(e) => handleKeyDown(i, e)}
-                onChange={(e) => handleChange(i, e.target.value)}
-                maxLength={1}
-                autoComplete="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                aria-label={letterAriaLabel(i + 1)}
-                disabled={disabled}
-              />
+              <div key={i} className="letter-slot">
+                {draft.changedIndex === i && (
+                  <span className="letter-change-arrow">↓</span>
+                )}
+                <input
+                  ref={(el) => {
+                    inputRefs.current[i] = el;
+                  }}
+                  className={`letter-cell letter-input ${
+                    draft.changedIndex === i ? "letter-changed" : ""
+                  } ${matchedIndices?.has(i) ? "letter-common" : ""} ${
+                    draft.activeIndex === i ? "letter-input-active" : ""
+                  }`}
+                  value={letter.toLocaleUpperCase(locale)}
+                  onFocus={(e) => {
+                    setDraft((prev) =>
+                      prev.activeIndex === i ? prev : { ...prev, activeIndex: i }
+                    );
+                    e.currentTarget.select();
+                  }}
+                  onKeyDownCapture={handleKeyDownCapture}
+                  onKeyDown={(e) => handleKeyDown(i, e)}
+                  onChange={(e) => handleChange(i, e.target.value)}
+                  maxLength={1}
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  aria-label={letterAriaLabel(i + 1)}
+                  disabled={disabled}
+                />
+              </div>
             ))}
           </div>
           <div className="ladder-line-action">

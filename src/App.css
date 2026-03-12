@@ -180,6 +180,25 @@
   width: max-content;
 }
 
+.letter-slot {
+  position: relative;
+  width: 52px;
+  height: 52px;
+}
+
+.letter-change-arrow {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-secondary);
+  pointer-events: none;
+  user-select: none;
+}
+
 .word-row-placeholder {
   visibility: hidden;
 }
@@ -209,6 +228,11 @@
   background: var(--cell-edited-bg);
   border-color: var(--cell-edited-border);
   color: var(--text);
+}
+
+.letter-common {
+  background: rgba(126, 186, 76, 0.22);
+  border-color: rgba(126, 186, 76, 0.7);
 }
 
 .letter-start {
@@ -495,6 +519,11 @@
 
 /* Mobile */
 @media (max-width: 400px) {
+  .letter-slot {
+    width: 44px;
+    height: 44px;
+  }
+
   .letter-cell {
     width: 44px;
     height: 44px;

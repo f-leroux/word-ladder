@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   type ActiveSide,
   type GameState,
@@ -16,6 +16,20 @@ import { WordRow } from "./WordRow";
 import { WordInput } from "./WordInput";
 import { GameOver } from "./GameOver";
 
+function getSharedLetterIndices(a: string, b: string): Set<number> {
+  const left = Array.from(a);
+  const right = Array.from(b);
+  const indices = new Set<number>();
+
+  for (let i = 0; i < Math.min(left.length, right.length); i++) {
+    if (left[i] === right[i]) {
+      indices.add(i);
+    }
+  }
+
+  return indices;
+}
+
 function PlaceholderRow() {
   return (
     <div className="word-row word-row-placeholder" aria-hidden="true">
@@ -32,13 +46,25 @@ interface GameProps {
 }
 
 export function Game({ locale, strings }: GameProps) {
-  const [state, setState] = useState<GameState>(() => {
-    return loadGame(locale) || createGameState(locale);
-  });
+  const initialStateRef = useRef<GameState | null>(null);
+  if (initialStateRef.current === null) {
+    initialStateRef.current = loadGame(locale) || createGameState(locale);
+  }
+
+  const [state, setState] = useState<GameState>(() => initialStateRef.current!);
+  const [startDraftWord, setStartDraftWord] = useState(() =>
+    getFrontierWord(initialStateRef.current!, "start")
+  );
+  const [endDraftWord, setEndDraftWord] = useState(() =>
+    getFrontierWord(initialStateRef.current!, "end")
+  );
   const { alphabet } = getLocaleContent(locale);
 
   useEffect(() => {
-    setState(loadGame(locale) || createGameState(locale));
+    const nextState = loadGame(locale) || createGameState(locale);
+    setState(nextState);
+    setStartDraftWord(getFrontierWord(nextState, "start"));
+    setEndDraftWord(getFrontierWord(nextState, "end"));
   }, [locale]);
 
   useEffect(() => {
@@ -154,7 +180,16 @@ export function Game({ locale, strings }: GameProps) {
         return;
       }
 
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" && event.key !== "Esc") return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
 
       const canUndo =
         state.activeSide === "start"
@@ -166,8 +201,8 @@ export function Game({ locale, strings }: GameProps) {
       handleUndo();
     };
 
-    window.addEventListener("keydown", handleGlobalKey, true);
-    return () => window.removeEventListener("keydown", handleGlobalKey, true);
+    document.addEventListener("keydown", handleGlobalKey, true);
+    return () => document.removeEventListener("keydown", handleGlobalKey, true);
   }, [
     handleUndo,
     state.activeSide,
@@ -186,6 +221,10 @@ export function Game({ locale, strings }: GameProps) {
   const endInputWord = getFrontierWord(state, "end");
   const backwardRows =
     state.activeSide === "end" ? backwardDisplay.slice(1) : backwardDisplay;
+  const currentTopWord = state.activeSide === "start" ? startDraftWord : startInputWord;
+  const currentBottomWord =
+    state.activeSide === "end" ? endDraftWord : (backwardRows[0] ?? endInputWord);
+  const sharedFrontierIndices = getSharedLetterIndices(currentTopWord, currentBottomWord);
 
   const switchButtonLabel =
     state.activeSide === "start" ? strings.buildFromEnd : strings.buildFromStart;
@@ -222,6 +261,11 @@ export function Game({ locale, strings }: GameProps) {
                 <WordRow
                   locale={state.locale}
                   word={word}
+                  matchedIndices={
+                    state.activeSide === "end" && i === forwardRows.length - 1
+                      ? sharedFrontierIndices
+                      : undefined
+                  }
                   previousWord={i > 0 ? forwardRows[i - 1] : undefined}
                   isStart={i === 0}
                   startLabel={strings.startLabel}
@@ -247,6 +291,8 @@ export function Game({ locale, strings }: GameProps) {
               <WordInput
                 onSubmit={handleSubmit}
                 onUndo={handleUndo}
+                onDraftChange={setStartDraftWord}
+                matchedIndices={sharedFrontierIndices}
                 canUndo={canUndoActiveSide}
                 locale={state.locale}
                 alphabet={alphabet}
@@ -287,6 +333,8 @@ export function Game({ locale, strings }: GameProps) {
               <WordInput
                 onSubmit={handleSubmit}
                 onUndo={handleUndo}
+                onDraftChange={setEndDraftWord}
+                matchedIndices={sharedFrontierIndices}
                 canUndo={canUndoActiveSide}
                 locale={state.locale}
                 alphabet={alphabet}
@@ -310,6 +358,11 @@ export function Game({ locale, strings }: GameProps) {
                 <WordRow
                   locale={state.locale}
                   word={word}
+                  matchedIndices={
+                    state.activeSide === "start" && i === 0
+                      ? sharedFrontierIndices
+                      : undefined
+                  }
                   previousWord={
                     state.activeSide === "end"
                       ? i === 0
