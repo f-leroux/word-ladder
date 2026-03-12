@@ -17,7 +17,6 @@ export interface LocaleStrings {
   undoShort: string;
   buildFromEnd: string;
   buildFromStart: string;
-  switchSideShort: string;
   moveLeft: string;
   moveRight: string;
   giveUp: string;
@@ -78,7 +77,6 @@ const STRINGS: Record<Locale, LocaleStrings> = {
     undoShort: "Undo",
     buildFromEnd: "Build From End",
     buildFromStart: "Build From Start",
-    switchSideShort: "Switch",
     moveLeft: "Move left",
     moveRight: "Move right",
     giveUp: "Give Up",
@@ -141,7 +139,6 @@ const STRINGS: Record<Locale, LocaleStrings> = {
     undoShort: "Annuler",
     buildFromEnd: "Partir de la fin",
     buildFromStart: "Partir du début",
-    switchSideShort: "Changer",
     moveLeft: "Vers la gauche",
     moveRight: "Vers la droite",
     giveUp: "Abandonner",

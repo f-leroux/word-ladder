@@ -25,7 +25,6 @@ interface WordInputProps {
   undoLabel: string;
   undoShortLabel: string;
   switchSideLabel: string;
-  switchSideShortLabel: string;
   changeOneLetterMessage: string;
   invalidWordMessage: string;
   letterAriaLabel: (index: number) => string;
@@ -108,7 +107,6 @@ export function WordInput({
   undoLabel,
   undoShortLabel,
   switchSideLabel,
-  switchSideShortLabel,
   changeOneLetterMessage,
   invalidWordMessage,
   letterAriaLabel,
@@ -548,19 +546,15 @@ export function WordInput({
                 tabIndex={-1}
                 aria-label={switchSideLabel}
               >
-                {switchSideShortLabel}
+                <span className="mobile-switch-icon" aria-hidden="true">
+                  ↑↓
+                </span>
               </button>
             </div>
 
             <div className="mobile-keyboard" aria-label="On-screen keyboard">
               {mobileKeyboardRows.map((row, rowIndex) => (
-                <div
-                  key={rowIndex}
-                  className="mobile-keyboard-row"
-                  style={{
-                    gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))`,
-                  }}
-                >
+                <div key={rowIndex} className="mobile-keyboard-row">
                   {row.map((letter) => (
                     <button
                       key={letter}

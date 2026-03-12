@@ -255,6 +255,18 @@ export function Game({ locale, strings }: GameProps) {
     <div className={`game${!state.isComplete ? " game--editing" : ""}`}>
       <div className="game-info">
         <span className="puzzle-number">#{state.puzzleNumber}</span>
+        {!state.isComplete && (
+          <div className="game-info-center">
+            <button
+              className="give-up-btn give-up-btn-mobile"
+              onClick={handleGiveUp}
+              tabIndex={-1}
+              type="button"
+            >
+              {strings.giveUp}
+            </button>
+          </div>
+        )}
         <span className="step-count">{strings.stepCount(steps)}</span>
       </div>
 
@@ -329,7 +341,6 @@ export function Game({ locale, strings }: GameProps) {
                 undoShortLabel={strings.undoShort}
                 onSwitchSide={handleSwitchSide}
                 switchSideLabel={switchButtonLabel}
-                switchSideShortLabel={strings.switchSideShort}
                 changeOneLetterMessage={strings.changeOneLetterToContinue}
                 invalidWordMessage={strings.invalidWord}
                 letterAriaLabel={strings.letterAriaLabel}
@@ -374,7 +385,6 @@ export function Game({ locale, strings }: GameProps) {
                 undoShortLabel={strings.undoShort}
                 onSwitchSide={handleSwitchSide}
                 switchSideLabel={switchButtonLabel}
-                switchSideShortLabel={strings.switchSideShort}
                 changeOneLetterMessage={strings.changeOneLetterToContinue}
                 invalidWordMessage={strings.invalidWord}
                 letterAriaLabel={strings.letterAriaLabel}
