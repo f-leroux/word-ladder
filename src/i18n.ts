@@ -19,6 +19,7 @@ export interface LocaleStrings {
   buildFromStart: string;
   moveLeft: string;
   moveRight: string;
+  backspaceLabel: string;
   giveUp: string;
   copied: string;
   shareResult: string;
@@ -45,7 +46,7 @@ export interface LocaleStrings {
     great: string;
     good: string;
     done: string;
-    summary: (steps: number, optimal: number, rating: string) => string;
+    summary: (steps: number) => string;
     startTag: string;
     endTag: string;
     url: string;
@@ -79,6 +80,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
     buildFromStart: "Build From Start",
     moveLeft: "Move left",
     moveRight: "Move right",
+    backspaceLabel: "Backspace",
     giveUp: "Give Up",
     copied: "Copied!",
     shareResult: "Share Result 📋",
@@ -107,8 +109,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       great: "🔥 Great!",
       good: "👍 Good",
       done: "✅ Done",
-      summary: (steps, optimal, rating) =>
-        `${steps} steps (optimal: ${optimal}) ${rating}`,
+      summary: (steps) => `Solved in ${steps} step${steps === 1 ? "" : "s"}`,
       startTag: "(start)",
       endTag: "(end)",
       url: "https://f-leroux.github.io/word-ladder/",
@@ -141,6 +142,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
     buildFromStart: "Partir du début",
     moveLeft: "Vers la gauche",
     moveRight: "Vers la droite",
+    backspaceLabel: "Effacer",
     giveUp: "Abandonner",
     copied: "Copié !",
     shareResult: "Partager 📋",
@@ -171,8 +173,7 @@ const STRINGS: Record<Locale, LocaleStrings> = {
       great: "🔥 Super !",
       good: "👍 Bien joué",
       done: "✅ Terminé",
-      summary: (steps, optimal, rating) =>
-        `${steps} étapes (optimal : ${optimal}) ${rating}`,
+      summary: (steps) => `Résolu en ${steps} étape${steps === 1 ? "" : "s"}`,
       startTag: "(début)",
       endTag: "(fin)",
       url: "https://f-leroux.github.io/word-ladder/?lang=fr",

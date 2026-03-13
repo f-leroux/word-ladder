@@ -346,6 +346,7 @@ export function Game({ locale, strings }: GameProps) {
                 letterAriaLabel={strings.letterAriaLabel}
                 moveLeftLabel={strings.moveLeft}
                 moveRightLabel={strings.moveRight}
+                backspaceLabel={strings.backspaceLabel}
                 startLabel={strings.startLabel}
                 endLabel={strings.endLabel}
               />
@@ -390,6 +391,7 @@ export function Game({ locale, strings }: GameProps) {
                 letterAriaLabel={strings.letterAriaLabel}
                 moveLeftLabel={strings.moveLeft}
                 moveRightLabel={strings.moveRight}
+                backspaceLabel={strings.backspaceLabel}
                 startLabel={strings.startLabel}
                 endLabel={strings.endLabel}
               />

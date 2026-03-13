@@ -30,6 +30,7 @@ interface WordInputProps {
   letterAriaLabel: (index: number) => string;
   moveLeftLabel: string;
   moveRightLabel: string;
+  backspaceLabel: string;
   startLabel: string;
   endLabel: string;
 }
@@ -112,6 +113,7 @@ export function WordInput({
   letterAriaLabel,
   moveLeftLabel,
   moveRightLabel,
+  backspaceLabel,
   startLabel,
   endLabel,
 }: WordInputProps) {
@@ -267,6 +269,15 @@ export function WordInput({
     },
     [applyLetter, draft.activeIndex]
   );
+
+  const handleBackspace = useCallback(() => {
+    if (draft.changedIndex === draft.activeIndex) {
+      revertLetter(draft.activeIndex);
+      return;
+    }
+
+    moveActive(draft.activeIndex, -1);
+  }, [draft.activeIndex, draft.changedIndex, moveActive, revertLetter]);
 
   const handleSubmit = useCallback(() => {
     if (draft.changedIndex === null) {
@@ -604,6 +615,17 @@ export function WordInput({
                       {letter.toLocaleUpperCase(locale)}
                     </button>
                   ))}
+                  {rowIndex === mobileKeyboardRows.length - 1 && (
+                    <button
+                      className="mobile-key-btn mobile-key-btn-action"
+                      onClick={handleBackspace}
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={backspaceLabel}
+                    >
+                      <span aria-hidden="true">⌫</span>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

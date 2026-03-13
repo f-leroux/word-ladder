@@ -255,41 +255,12 @@ export function generateShareText(state: GameState): string {
   const { puzzle, puzzleNumber } = state;
   const chain = getMergedChain(state);
   const steps = chain.length - 1; // exclude start word
-  const optimal = puzzle.optimalLength;
-  const rating =
-    steps === optimal
-      ? strings.share.perfect
-      : steps <= optimal + 1
-        ? strings.share.great
-        : steps <= optimal + 3
-          ? strings.share.good
-          : strings.share.done;
 
   let text = `🪜 ${strings.share.gameName} #${puzzleNumber}\n`;
   text += `${puzzle.start.toLocaleUpperCase(state.locale)} → ${puzzle.end.toLocaleUpperCase(
     state.locale
   )}\n`;
-  text += `${strings.share.summary(steps, optimal, rating)}\n\n`;
-
-  // Show the chain with changed letters highlighted
-  for (let i = 0; i < chain.length; i++) {
-    const word = chain[i].toLocaleUpperCase(state.locale);
-    if (i === 0) {
-      text += `${word} ${strings.share.startTag}\n`;
-    } else {
-      // Find which letter changed
-      const prev = Array.from(chain[i - 1]);
-      const curr = Array.from(chain[i]);
-      let indicator = "";
-      for (let j = 0; j < curr.length; j++) {
-        indicator += prev[j] === curr[j] ? "·" : "↕";
-      }
-      text += `${indicator}\n${word}${
-        i === chain.length - 1 ? ` ${strings.share.endTag}` : ""
-      }\n`;
-    }
-  }
-
-  text += `\n${strings.share.url}`;
+  text += `${strings.share.summary(steps)}\n\n`;
+  text += `${strings.share.url}`;
   return text;
 }
