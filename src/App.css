@@ -563,7 +563,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  width: calc(var(--mobile-key-size) * 1.45);
+  flex: 0 0 calc(var(--mobile-key-size) * 1.45);
+  background: var(--button-secondary);
+  border-color: var(--button-secondary-border);
+  font-size: 22px;
 }
 
 .mobile-switch-icon {
